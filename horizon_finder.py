@@ -36,6 +36,9 @@ if __name__ == '__main__':
         if input_image is None:
             sys.exit("Bad input, check your filename: {0}".format(input_image))
 
+        # Some of the samples have a thin black line along the top
+        # This dirty data plays hell with edge finding, so just crop it away
+        input_image = input_image[2:][::]
         image_width = input_image.shape[1]
         image_height = input_image.shape[0]
 
