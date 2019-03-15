@@ -42,62 +42,52 @@ if __name__ == '__main__':
         image_width = input_image.shape[1]
         image_height = input_image.shape[0]
 
-        ## ------------------------------
+        horizontal_edge_display = np.copy(input_image)
+
 
         # Sobel output is signed, so a step is required before goingto uint8. See
         # https://docs.opencv.org/3.4/d5/d0f/tutorial_py_gradients.html
-        input_image = cv.bilateralFilter(input_image, 9, 500, 500)
-        blue_channel, green_channel, red_channel = cv.split(input_image)
-        target_image = np.uint8(np.absolute(cv.Sobel(green_channel, cv.CV_32F, 0, 1, ksize=3)))
+        horizontal_edge_display = cv.bilateralFilter(horizontal_edge_display, 9, 500, 500)
+        blue_channel, green_channel, red_channel = cv.split(horizontal_edge_display)
+
+        edges_image = np.uint8(np.absolute(cv.Sobel(green_channel, cv.CV_32F, 0, 1, ksize=3)))
 
         cutoff_percentile = 99
-        cutoff_value = np.percentile(target_image, cutoff_percentile)
-        print(cutoff_value, np.max(target_image))
-        _, target_image = cv.threshold(target_image, cutoff_value, 255, cv.THRESH_BINARY)
+        cutoff_value = np.percentile(edges_image, cutoff_percentile)
+        print("Percentile cutoff, ", cutoff_value, " max ", np.max(edges_image))
+        _, edges_image = cv.threshold(edges_image, cutoff_value, 255, cv.THRESH_BINARY)
 
         # Reinterpret as a collection of points:
         #masked_array = np.mask_indices
-        selected_points = target_image.nonzero()
-
+        selected_points = edges_image.nonzero()
 
         ########
         fig = plt.figure(figsize=(18, 6))
-        gs = gridspec.GridSpec(nrows=1, ncols=2, width_ratios=[1, 1])
+        gs = gridspec.GridSpec(nrows=1, ncols=1)
         ax_h = fig.add_subplot(gs[0])
         #ax_v = fig.add_subplot(gs[1])
         ax_h.scatter(selected_points[1], -1 * selected_points[0], color='b')
-        ax_h.set_title("Horizontal")
+        ax_h.set_title("Filtered Points")
         ax_h.set_ylim([-1 * image_height, 0])
-
-        #ticks = ticker.FuncFormatter(lambda q, pos: '{0:g}'.format(round(q / (2 * sensor_size_em11_mm[0]))))
-        #ax_h.xaxis.set_major_formatter(ticks)
-        #ax_h.set_xticks(np.arange(5, pixels_x + 2 * step_size_mtf5[0], 2 * step_size_mtf5[0]))
-        #ticks = ticker.FuncFormatter(lambda q, pos: '{0:g}'.format(round(q / (2 * sensor_size_em11_mm[1]))))
-        #ax_v.xaxis.set_major_formatter(ticks)
-        # ax_v.set_xticks(np.arange(5, pixels_y + 2 * step_size_mtf5[1], 2 * step_size_mtf5[1]))
-
 
 
         # Robustly fit linear model with RANSAC algorithm
         # https://scikit-learn.org/stable/auto_examples/linear_model/plot_ransac.html
-
-
         ransac = linear_model.RANSACRegressor()
         #{'base_estimator': None, 'is_data_valid': None, 'is_model_valid': None, 'loss': 'absolute_loss', 'max_skips': inf, 'max_trials': 100, 'min_samples': None, 'random_state': None, 'residual_threshold': None, 'stop_n_inliers': inf, 'stop_probability': 0.99, 'stop_score': inf}
-        ransac.set_params(max_trials=1000, stop_probability=.9999)
+        ransac.set_params(max_trials=1000, stop_probability=.9999, loss='squared_loss')
 
         ransac.fit(selected_points[1].reshape(-1, 1), -1 * selected_points[0])
         inlier_mask = ransac.inlier_mask_
         outlier_mask = np.logical_not(inlier_mask)
 
-        #line_y_ransac = ransac.predict(selected_points[1].reshape(-1, 1))
-        print("coef??", ransac.estimator_.coef_)
-        plt.plot(np.arange(0, image_width), ransac.predict(np.arange(0, image_width).reshape(-1, 1)))
+        # Multiply by -1 to convert from "plot" coordinates to "image" coordinates
+        ransac_intercept = -1 * int(round(ransac.estimator_.intercept_))
+        ransac_slope = -1 * ransac.estimator_.coef_[0]
 
-        plt.savefig("output.png")
-        cvplot = cv.imread("output.png")
+        cv.line(horizontal_edge_display, (0, ransac_intercept), (image_width, int(round(ransac_intercept + ransac_slope * image_width))),
+                thickness=3, color=(0, 0, 255))
 
-        ## ------------------------------
         while True:
             k = cv.waitKey(1)
             # Press j or f for next image, q or escape to quit
@@ -106,8 +96,7 @@ if __name__ == '__main__':
             elif k == 'j' or k == 102 or k == 'f' or k == 106 or k == 65363:
                 break
 
-            cv.imshow("input", input_image)
-            cv.imshow("threshed", target_image)
-            cv.imshow("plot", cvplot)
+            cv.imshow("input", horizontal_edge_display)
+            cv.imshow("threshed", edges_image)
 
     print("All done!")
