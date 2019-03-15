@@ -13,11 +13,6 @@ import matplotlib.ticker as ticker
 import cv2 as cv
 import numpy as np
 
-# Other ideas:
-# SVM
-# bounding figure over spatial frequency dense areas
-# PCA
-
 if __name__ == '__main__':
     source_files = "images"
 
@@ -44,21 +39,18 @@ if __name__ == '__main__':
 
         horizontal_edge_display = np.copy(input_image)
 
-
         # Sobel output is signed, so a step is required before goingto uint8. See
         # https://docs.opencv.org/3.4/d5/d0f/tutorial_py_gradients.html
         horizontal_edge_display = cv.bilateralFilter(horizontal_edge_display, 9, 500, 500)
         blue_channel, green_channel, red_channel = cv.split(horizontal_edge_display)
-
         edges_image = np.uint8(np.absolute(cv.Sobel(green_channel, cv.CV_32F, 0, 1, ksize=3)))
 
-        cutoff_percentile = 99
+        cutoff_percentile = 97
         cutoff_value = np.percentile(edges_image, cutoff_percentile)
         print("Percentile cutoff, ", cutoff_value, " max ", np.max(edges_image))
         _, edges_image = cv.threshold(edges_image, cutoff_value, 255, cv.THRESH_BINARY)
 
         # Reinterpret as a collection of points:
-        #masked_array = np.mask_indices
         selected_points = edges_image.nonzero()
 
         ########
@@ -70,16 +62,11 @@ if __name__ == '__main__':
         ax_h.set_title("Filtered Points")
         ax_h.set_ylim([-1 * image_height, 0])
 
-
         # Robustly fit linear model with RANSAC algorithm
         # https://scikit-learn.org/stable/auto_examples/linear_model/plot_ransac.html
         ransac = linear_model.RANSACRegressor()
-        #{'base_estimator': None, 'is_data_valid': None, 'is_model_valid': None, 'loss': 'absolute_loss', 'max_skips': inf, 'max_trials': 100, 'min_samples': None, 'random_state': None, 'residual_threshold': None, 'stop_n_inliers': inf, 'stop_probability': 0.99, 'stop_score': inf}
         ransac.set_params(max_trials=1000, stop_probability=.9999, loss='squared_loss')
-
         ransac.fit(selected_points[1].reshape(-1, 1), -1 * selected_points[0])
-        inlier_mask = ransac.inlier_mask_
-        outlier_mask = np.logical_not(inlier_mask)
 
         # Multiply by -1 to convert from "plot" coordinates to "image" coordinates
         ransac_intercept = -1 * int(round(ransac.estimator_.intercept_))
