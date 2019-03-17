@@ -30,18 +30,11 @@ def horizontal_edge_regression(input_image):
     #print("Percentile cutoff, ", cutoff_value, " max ", np.max(edges_image))
     _, edges_image = cv.threshold(edges_image, cutoff_value, 255, cv.THRESH_BINARY)
 
-    # Reinterpret as a collection of points:
+    # Reinterpret as a collection of points to use scikit's RANSAC:
     selected_points = edges_image.nonzero()
+    # Robustly fit linear model with RANSAC algorithm
+    # https://scikit-learn.org/stable/auto_examples/linear_model/plot_ransac.html
     if len(selected_points[0] > 0):
-        fig = plt.figure(figsize=(18, 6))
-        gs = gridspec.GridSpec(nrows=1, ncols=1)
-        ax_h = fig.add_subplot(gs[0])
-        ax_h.scatter(selected_points[1], -1 * selected_points[0], color='b')
-        ax_h.set_title("Filtered Points")
-        ax_h.set_ylim([-1 * image_height, 0])
-
-        # Robustly fit linear model with RANSAC algorithm
-        # https://scikit-learn.org/stable/auto_examples/linear_model/plot_ransac.html
         ransac = linear_model.RANSACRegressor()
         ransac.set_params(max_trials=1000, stop_probability=.9999, loss='squared_loss')
         ransac.fit(selected_points[1].reshape(-1, 1), -1 * selected_points[0])
@@ -50,9 +43,9 @@ def horizontal_edge_regression(input_image):
         ransac_intercept = -1 * int(round(ransac.estimator_.intercept_))
         ransac_slope = -1 * ransac.estimator_.coef_[0]
 
-        return (ransac_intercept, ransac_slope)
+        return [ransac_intercept, ransac_slope]
     else:
-        return (None, None)
+        return [None, None]
 
 
 ''' Return format: openCV's Keypoint. Not my favorite struct but it's too much for a tuple and too little
