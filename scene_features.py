@@ -3,22 +3,25 @@
 import cv2 as cv
 import numpy as np
 
-
-''' Return format: openCV's Keypoint. Not my favorite struct but it's too much for a tuple and too little
-    to create a custom class for'''
-def sun_finder(input_image):
-    brightness_threshold = 251
-    min_radius = 20
-    max_radius = 180
+''' Locate the presence of a likely sun in the image based on overexposed pixels. See readme.md for more details.
+    Radius coordinates are in pixels, built for images roughly 1280px wide and a wide angle lens.
+    If lots of different sized images are necessary, either resize them upstream or convert the code to relative image sizes.
+    Return format: openCV's Keypoint. Not my favorite struct but it's too much for a tuple and too little
+    to create a custom class for.'''
+def sun_finder(input_image, overexposure_threshold=251, min_radius=20, max_radius=180, ):
+    working_image = np.copy(input_image)
     proportion_required = .5
     erode_amount = 5
     dilate_amount = 10
 
-    grayscale_image = cv.cvtColor(input_image, cv.COLOR_BGR2GRAY)
-    _, threshed_image = cv.threshold(grayscale_image, brightness_threshold, 255, cv.THRESH_BINARY)
+    working_image = cv.cvtColor(working_image, cv.COLOR_BGR2GRAY)
+    _, threshed_image = cv.threshold(working_image, overexposure_threshold, 255, cv.THRESH_BINARY)
+    # Try and clean up stray noisy flecks from reflected light, artificial lights, etc.
     threshed_image = cv.erode(threshed_image, cv.getStructuringElement(cv.MORPH_RECT, (erode_amount, erode_amount)))
     threshed_image = cv.dilate(threshed_image, cv.getStructuringElement(cv.MORPH_RECT, (dilate_amount, dilate_amount)))
 
+    # Set up and run OpenCV's SimpleBlobDetector. See
+    # https://www.learnopencv.com/blob-detection-using-opencv-python-c/
     blob_detector_param = cv.SimpleBlobDetector_Params()
     blob_detector_param.filterByColor = False
     blob_detector_param.filterByArea = True
@@ -30,8 +33,7 @@ def sun_finder(input_image):
     blob_detector_param.minInertiaRatio = .3
     blob_detector_param.filterByConvexity = False
 
-    # This version munging is necessary according to link below
-    # https://www.learnopencv.com/blob-detection-using-opencv-python-c/
+    # This version munging is necessary according to link above
     blob_detector = None
     ver = (cv.__version__).split('.')
     if int(ver[0]) < 3:
@@ -44,6 +46,7 @@ def sun_finder(input_image):
         return None
 
     # Check how much this overexposed section is relative to the entire image.
+    # If there are lots of overexposed image parts, we're likely getting clouds or an entire sky.
     # We only want one sun location no matter what, so sort and return the largest.
     filtered_blobs = []
     total_masked = np.count_nonzero(threshed_image)
@@ -56,15 +59,20 @@ def sun_finder(input_image):
         return None
 
     filtered_blobs = sorted(filtered_blobs, key=lambda x: x.size)
-    return filtered_blobs[0]
+    return filtered_blobs[-1]
 
+
+''' What does an image taken from a drone camera taken at night look like? Probably mostly black.
+'''
 def night_detector(input_image, black_threshold=10, proportion_required=.6):
-    grayscale_image = cv.cvtColor(input_image, cv.COLOR_BGR2GRAY)
-    _, threshed_image = cv.threshold(grayscale_image, black_threshold, 255, cv.THRESH_BINARY_INV)
+    working_image = np.copy(input_image)
+    working_image = cv.cvtColor(working_image, cv.COLOR_BGR2GRAY)
+    _, threshed_image = cv.threshold(working_image, black_threshold, 255, cv.THRESH_BINARY_INV)
     black_proportion = float(np.count_nonzero(threshed_image)) / (threshed_image.shape[0] * threshed_image.shape[1])
     return black_proportion > proportion_required
 
-''' Fog looks a lot like blur. The variance of the Laplacian is a good easy blur detector.
+
+''' Fog looks a lot like blur. The variance of the Laplacian is a nice, easy blur detector.
     See: https://www.pyimagesearch.com/2015/09/07/blur-detection-with-opencv/'''
 def cloud_detector(input_image, blurry_threshold=18):
     return cv.Laplacian(input_image, cv.CV_32F).var() < blurry_threshold
