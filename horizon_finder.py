@@ -55,6 +55,60 @@ def horizontal_edge_regression(input_image):
         return (None, None)
 
 
+''' Return format: openCV's Keypoint. Ugh, not my favorite struct'''
+def sun_finder(input_image):
+    brightness_threshold = 251
+    min_radius = 20
+    max_radius = 180
+    proportionality_req = .5
+    erode_amount = 5
+    dilate_amount = 10
+
+    grayscale_image = cv.cvtColor(input_image, cv.COLOR_BGR2GRAY)
+    _, threshed_image = cv.threshold(grayscale_image, brightness_threshold, 255, cv.THRESH_BINARY)
+    threshed_image = cv.erode(threshed_image, cv.getStructuringElement(cv.MORPH_RECT, (erode_amount, erode_amount)))
+    threshed_image = cv.dilate(threshed_image, cv.getStructuringElement(cv.MORPH_RECT, (dilate_amount, dilate_amount)))
+
+    blob_detector_param = cv.SimpleBlobDetector_Params()
+    blob_detector_param.filterByColor = False
+    blob_detector_param.filterByArea = True
+    blob_detector_param.minArea = int(round(min_radius**2 * np.pi))
+    blob_detector_param.maxArea = int(round(max_radius**2 * np.pi))
+    blob_detector_param.filterByCircularity = True
+    blob_detector_param.minCircularity = .2
+    blob_detector_param.filterByInertia = True
+    blob_detector_param.minInertiaRatio = .3
+    blob_detector_param.filterByConvexity = False
+
+    # This version munging is necessary according to link below
+    # https://www.learnopencv.com/blob-detection-using-opencv-python-c/
+    blob_detector = None
+    ver = (cv.__version__).split('.')
+    if int(ver[0]) < 3:
+        blob_detector = cv.SimpleBlobDetector(blob_detector_param)
+    else:
+        blob_detector = cv.SimpleBlobDetector_create(blob_detector_param)
+
+    blobs = blob_detector.detect(threshed_image)
+    if blobs is None:
+        return None
+
+    # Check how much this overexposed section is relative to the entire image.
+    # We only want one sun location no matter what, so sort and return the largest.
+    filtered_blobs = []
+    total_masked = np.count_nonzero(threshed_image)
+    for blob in blobs:
+        blob_area = np.pi * (blob.size / 2)**2
+        if (blob_area / total_masked) > proportionality_req:
+            filtered_blobs.append(blob)
+
+    if len(filtered_blobs) == 0:
+        return None
+
+    filtered_blobs = sorted(filtered_blobs, key=lambda x: x.size)
+    return filtered_blobs[0]
+
+
 if __name__ == '__main__':
     source_files = "images"
 
@@ -80,11 +134,18 @@ if __name__ == '__main__':
         image_width = input_image.shape[1]
         mage_height = input_image.shape[0]
 
-        horiz_regression_intercept, horiz_regression_slope = horizontal_edge_regression(input_image)
+        horiz_regression_intercept, horiz_regression_slope = horizontal_edge_regression(np.copy(input_image))
         if horiz_regression_intercept is not None:
             cv.line(display_image, (0, horiz_regression_intercept),
                     (image_width, int(round(horiz_regression_intercept + horiz_regression_slope * image_width))),
                     thickness=3, color=(0, 0, 255))
+
+        detected_sun = sun_finder(np.copy(input_image))
+        if detected_sun is not None:
+            sun_coords = (int(round(detected_sun.pt[0])), int(round(detected_sun.pt[1])))
+            print(sun_coords)
+            sun_radius = int(round(detected_sun.size / 2))
+            cv.circle(display_image, sun_coords, sun_radius, color=(200, 0, 255), thickness=5)
 
         while True:
             k = cv.waitKey(1)
@@ -95,5 +156,6 @@ if __name__ == '__main__':
                 break
 
             cv.imshow("input", display_image)
+            #cv.imshow("threshed", threshed_image)
 
     print("All done!")
