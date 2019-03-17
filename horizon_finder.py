@@ -102,7 +102,6 @@ def sun_finder(input_image):
     filtered_blobs = sorted(filtered_blobs, key=lambda x: x.size)
     return filtered_blobs[0]
 
-
 def night_detector(input_image, black_threshold=10, proportion_required=.6):
     grayscale_image = cv.cvtColor(input_image, cv.COLOR_BGR2GRAY)
     _, threshed_image = cv.threshold(grayscale_image, black_threshold, 255, cv.THRESH_BINARY_INV)
@@ -111,8 +110,9 @@ def night_detector(input_image, black_threshold=10, proportion_required=.6):
 
 ''' Fog looks a lot like blur. The variance of the Laplacian is a good easy blur detector.
     See: https://www.pyimagesearch.com/2015/09/07/blur-detection-with-opencv/'''
-def cloud_detector(input_image):
-    print(cv.Laplacian(input_image, cv.CV_32F).var())
+def cloud_detector(input_image, blurry_threshold=18):
+    return cv.Laplacian(input_image, cv.CV_32F).var() < blurry_threshold
+
 
 if __name__ == '__main__':
     source_files = "images"
@@ -148,13 +148,14 @@ if __name__ == '__main__':
         if night_detector(np.copy(input_image)):
             cv.putText(display_image, "Night Time", (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, color=(80, 200, 255), thickness=4)
 
+        if cloud_detector(np.copy(input_image)):
+            cv.putText(display_image, "Cloudy/Foggy", (50, 100), cv.FONT_HERSHEY_SIMPLEX, 1, color=(80, 200, 255), thickness=4)
+
         detected_sun = sun_finder(np.copy(input_image))
         if detected_sun is not None:
             sun_coords = (int(round(detected_sun.pt[0])), int(round(detected_sun.pt[1])))
             sun_radius = int(round(detected_sun.size / 2))
             cv.circle(display_image, sun_coords, sun_radius, color=(200, 0, 255), thickness=5)
-
-        cloud_detector(np.copy(input_image))
 
         while True:
             k = cv.waitKey(1)
