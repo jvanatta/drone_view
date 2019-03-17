@@ -55,12 +55,13 @@ def horizontal_edge_regression(input_image):
         return (None, None)
 
 
-''' Return format: openCV's Keypoint. Ugh, not my favorite struct'''
+''' Return format: openCV's Keypoint. Not my favorite struct but it's too much for a tuple and too little
+    to create a custom class for'''
 def sun_finder(input_image):
     brightness_threshold = 251
     min_radius = 20
     max_radius = 180
-    proportionality_req = .5
+    proportion_required = .5
     erode_amount = 5
     dilate_amount = 10
 
@@ -99,7 +100,7 @@ def sun_finder(input_image):
     total_masked = np.count_nonzero(threshed_image)
     for blob in blobs:
         blob_area = np.pi * (blob.size / 2)**2
-        if (blob_area / total_masked) > proportionality_req:
+        if (blob_area / total_masked) > proportion_required:
             filtered_blobs.append(blob)
 
     if len(filtered_blobs) == 0:
@@ -107,6 +108,13 @@ def sun_finder(input_image):
 
     filtered_blobs = sorted(filtered_blobs, key=lambda x: x.size)
     return filtered_blobs[0]
+
+
+def night_detector(input_image, black_threshold=10, proportion_required=.6):
+    grayscale_image = cv.cvtColor(input_image, cv.COLOR_BGR2GRAY)
+    _, threshed_image = cv.threshold(grayscale_image, black_threshold, 255, cv.THRESH_BINARY_INV)
+    black_proportion = float(np.count_nonzero(threshed_image)) / (threshed_image.shape[0] * threshed_image.shape[1])
+    return black_proportion > proportion_required
 
 
 if __name__ == '__main__':
@@ -139,6 +147,9 @@ if __name__ == '__main__':
             cv.line(display_image, (0, horiz_regression_intercept),
                     (image_width, int(round(horiz_regression_intercept + horiz_regression_slope * image_width))),
                     thickness=3, color=(0, 0, 255))
+
+        if night_detector(np.copy(input_image)):
+            cv.putText(display_image, "Night Time", (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, color=(80, 200, 255), thickness=4)
 
         detected_sun = sun_finder(np.copy(input_image))
         if detected_sun is not None:
