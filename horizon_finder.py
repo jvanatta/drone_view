@@ -27,7 +27,7 @@ def horizontal_edge_regression(input_image):
     edges_image = np.uint8(np.absolute(cv.Sobel(green_channel, cv.CV_32F, 0, 1, ksize=3)))
 
     cutoff_value = np.percentile(edges_image, cutoff_percentile)
-    print("Percentile cutoff, ", cutoff_value, " max ", np.max(edges_image))
+    #print("Percentile cutoff, ", cutoff_value, " max ", np.max(edges_image))
     _, edges_image = cv.threshold(edges_image, cutoff_value, 255, cv.THRESH_BINARY)
 
     # Reinterpret as a collection of points:
@@ -116,6 +116,10 @@ def night_detector(input_image, black_threshold=10, proportion_required=.6):
     black_proportion = float(np.count_nonzero(threshed_image)) / (threshed_image.shape[0] * threshed_image.shape[1])
     return black_proportion > proportion_required
 
+''' Fog looks a lot like blur. The variance of the Laplacian is a good easy blur detector.
+    See: https://www.pyimagesearch.com/2015/09/07/blur-detection-with-opencv/'''
+def cloud_detector(input_image):
+    print(cv.Laplacian(input_image, cv.CV_32F).var())
 
 if __name__ == '__main__':
     source_files = "images"
@@ -154,9 +158,10 @@ if __name__ == '__main__':
         detected_sun = sun_finder(np.copy(input_image))
         if detected_sun is not None:
             sun_coords = (int(round(detected_sun.pt[0])), int(round(detected_sun.pt[1])))
-            print(sun_coords)
             sun_radius = int(round(detected_sun.size / 2))
             cv.circle(display_image, sun_coords, sun_radius, color=(200, 0, 255), thickness=5)
+
+        cloud_detector(np.copy(input_image))
 
         while True:
             k = cv.waitKey(1)
