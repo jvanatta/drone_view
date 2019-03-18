@@ -57,9 +57,27 @@ def sun_finder(input_image, overexposure_threshold=251, min_radius=20, max_radiu
 
     if len(filtered_blobs) == 0:
         return None
-
     filtered_blobs = sorted(filtered_blobs, key=lambda x: x.size)
     return filtered_blobs[-1]
+
+
+''' Very quick and dirty height estimation. Use a cubic regression with parameters
+    I found from the 31 provided image samples. **Highly likely to be overfit.**
+    See readme.md for a picture of the curve fit.
+    It's not great to have these embedded in the source like this, but I'm not keen
+    on loading them as a config file for something so quick and dirty.
+    Units are meters. '''
+def height_estimation(input_image):
+    def cubic_function(x, a, b, c, d):
+        return a * x**3 + b * x**2 + c * x + d
+    a = -1.2429890960756994e-06
+    b = 0.002529233793937746
+    c = -1.390326640092421
+    d = 250.36468897434398
+
+    regression_value = cubic_function(cv.Laplacian(input_image, cv.CV_32F).var(), a, b, c, d)
+    # Pin the values between 0 and 2000m, to avoid any polynomial fit weirdness at the extremes
+    return min(max(regression_value, 0), 2000)
 
 
 ''' What does an image taken from a drone camera taken at night look like? Probably mostly black.

@@ -51,16 +51,20 @@ if __name__ == '__main__':
             cv.putText(display_image, "No Horizon Detected", (50, 200), cv.FONT_HERSHEY_SIMPLEX, 1, color=(0, 50, 255), thickness=4)
 
         if scene_features.night_detector(input_image):
-            cv.putText(display_image, "Night Time", (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, color=(80, 200, 255), thickness=4)
+            cv.putText(display_image, "Night Time", (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, color=(255, 50, 255), thickness=4)
 
         if scene_features.cloud_detector(input_image):
-            cv.putText(display_image, "Cloudy/Foggy", (50, 100), cv.FONT_HERSHEY_SIMPLEX, 1, color=(80, 200, 255), thickness=4)
+            cv.putText(display_image, "Cloudy/Foggy", (50, 100), cv.FONT_HERSHEY_SIMPLEX, 1, color=(255, 50, 255), thickness=4)
 
         detected_sun = scene_features.sun_finder(input_image)
         if detected_sun is not None:
             sun_coords = (int(round(detected_sun.pt[0])), int(round(detected_sun.pt[1])))
             sun_radius = int(round(detected_sun.size / 2))
-            cv.circle(display_image, sun_coords, sun_radius, color=(200, 0, 255), thickness=5)
+            cv.circle(display_image, sun_coords, sun_radius, color=(130, 0, 180), thickness=5)
+
+        estimated_height = int(round(scene_features.height_estimation(input_image), -1))
+        cv.putText(display_image, "Estimated height: {0}m".format(estimated_height),
+                   (50, 250), cv.FONT_HERSHEY_SIMPLEX, 1, color=(255, 50, 255), thickness=4)
 
         while True:
             k = cv.waitKey(1)
