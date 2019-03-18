@@ -8,7 +8,7 @@ Take a variety of pictures taken from cameras on drones, and try to add as much 
 
 * The code is Python 3. Dependencies are OpenCV, numpy, and scikit-learn.
 * The driver program is ``drone_view.py``. Press ``f`` for next image, or ``esc`` to exit the program.
-* The contents of ``./images`` will be loaded by default. Put the images there. They need to end in ``.png``. If they are ``.jpg``, change ``source_file_ext`` in ``drone_view.py``.
+* The contents of ``./images`` will be loaded by default. Put the images there, or change ``source_files`` in the code. They need to be either ``.jpg`` or ``.png``.
 
 
 #### Limitations

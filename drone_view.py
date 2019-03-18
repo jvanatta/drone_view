@@ -12,11 +12,12 @@ import scene_features
 
 if __name__ == '__main__':
     source_files = "images"
-    source_file_ext = ".png"
 
     images_to_process = []
     if os.path.isdir(source_files):
-        for filename in glob.glob("{0}/*{1}".format(source_files, source_file_ext)):
+        for filename in glob.glob("{0}/*.jpg".format(source_files)):
+            images_to_process.append(filename)
+        for filename in glob.glob("{0}/*.png".format(source_files)):
             images_to_process.append(filename)
     else:
         images_to_process.append(source_files)
