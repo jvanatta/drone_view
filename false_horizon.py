@@ -5,12 +5,12 @@ import numpy as np
 from sklearn import linear_model
 
 def horizontal_edge_regression(input_image, cutoff_percentile=97):
-    ''' Find the slope and intercept of a best guess at the false horizon.
+    """Find the slope and intercept of a best guess at the false horizon.
     For details and graphical examples, see readme.md
     cutoff_percentile determines how many of the detected horizontal edges
     to feed into the RANSAC fitting. Making it 95 or 99 will definitely
     change the outcome of marginal cases.
-    '''
+    """
     working_image = np.copy(input_image)
 
     # Sobel output is signed, so a step is required before goingto uint8. See

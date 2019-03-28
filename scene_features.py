@@ -4,12 +4,12 @@ import cv2 as cv
 import numpy as np
 
 def sun_finder(input_image, overexposure_threshold=251, min_radius=20, max_radius=180, ):
-    ''' Locate the presence of a likely sun in the image based on overexposed pixels. See readme.md for more details.
+    """ Locate the presence of a likely sun in the image based on overexposed pixels. See readme.md for more details.
     Radius coordinates are in pixels, built for images roughly 1280px wide and a wide angle lens.
     If lots of different sized images are necessary, either resize them upstream or convert the code to relative image sizes.
     Return format: openCV's Keypoint. Not my favorite struct but it's too much for a tuple and too little
     to create a custom class for.
-    '''
+    """
     working_image = np.copy(input_image)
     proportion_required = .5
     erode_amount = 5
@@ -63,13 +63,13 @@ def sun_finder(input_image, overexposure_threshold=251, min_radius=20, max_radiu
 
 
 def height_estimation(input_image):
-    ''' Very quick and dirty height estimation. Use a cubic regression with parameters
+    """ Very quick and dirty height estimation. Use a cubic regression with parameters
     I found from the 31 provided image samples. **Highly likely to be overfit.**
     See readme.md for a picture of the curve fit.
     It's not great to have these embedded in the source like this, but I'm not keen
     on loading them as a config file for something so quick and dirty.
     Units are meters.
-    '''
+    """
     def cubic_function(x, a, b, c, d):
         return a * x**3 + b * x**2 + c * x + d
     a = -1.2429890960756994e-06
@@ -83,8 +83,8 @@ def height_estimation(input_image):
 
 
 def night_detector(input_image, black_threshold=10, proportion_required=.6):
-    ''' What does an image taken from a drone camera taken at night look like? Probably mostly black.
-    '''
+    """ What does an image taken from a drone camera taken at night look like? Probably mostly black.
+    """
     working_image = np.copy(input_image)
     working_image = cv.cvtColor(working_image, cv.COLOR_BGR2GRAY)
     _, threshed_image = cv.threshold(working_image, black_threshold, 255, cv.THRESH_BINARY_INV)
@@ -93,9 +93,9 @@ def night_detector(input_image, black_threshold=10, proportion_required=.6):
 
 
 def cloud_detector(input_image, blurry_threshold=18):
-    ''' Fog looks a lot like blur. The variance of the Laplacian is a nice, easy blur detector.
+    """ Fog looks a lot like blur. The variance of the Laplacian is a nice, easy blur detector.
     See: https://www.pyimagesearch.com/2015/09/07/blur-detection-with-opencv/
-    '''
+    """
     return cv.Laplacian(input_image, cv.CV_32F).var() < blurry_threshold
 
 
