@@ -3,11 +3,13 @@
 import cv2 as cv
 import numpy as np
 
-def sun_finder(input_image, overexposure_threshold=251, min_radius=20, max_radius=180, ):
+def sun_finder(
+        input_image: np.ndarray, overexposure_threshold: int = 251,
+        min_radius: int = 20, max_radius: int = 180) -> cv.KeyPoint:
     """ Locate the presence of a likely sun in the image based on overexposed pixels. See readme.md for more details.
     Radius coordinates are in pixels, built for images roughly 1280px wide and a wide angle lens.
     If lots of different sized images are necessary, either resize them upstream or convert the code to relative image sizes.
-    Return format: openCV's Keypoint. Not my favorite struct but it's too much for a tuple and too little
+    Return format: openCV's KeyPoint. Not my favorite struct but it's too much for a tuple and too little
     to create a custom class for.
     """
     working_image = np.copy(input_image)
@@ -62,7 +64,7 @@ def sun_finder(input_image, overexposure_threshold=251, min_radius=20, max_radiu
     return filtered_blobs[-1]
 
 
-def height_estimation(input_image):
+def height_estimation(input_image: np.ndarray) -> float:
     """ Very quick and dirty height estimation. Use a cubic regression with parameters
     I found from the 31 provided image samples. **Highly likely to be overfit.**
     See readme.md for a picture of the curve fit.
@@ -82,7 +84,7 @@ def height_estimation(input_image):
     return min(max(regression_value, 0), 2000)
 
 
-def night_detector(input_image, black_threshold=10, proportion_required=.6):
+def night_detector(input_image: np.ndarray, black_threshold: int = 10, proportion_required: float = .6) -> bool:
     """ What does an image taken from a drone camera taken at night look like? Probably mostly black.
     """
     working_image = np.copy(input_image)
@@ -92,7 +94,7 @@ def night_detector(input_image, black_threshold=10, proportion_required=.6):
     return black_proportion > proportion_required
 
 
-def cloud_detector(input_image, blurry_threshold=18):
+def cloud_detector(input_image: np.ndarray, blurry_threshold: float = 18) -> bool:
     """ Fog looks a lot like blur. The variance of the Laplacian is a nice, easy blur detector.
     See: https://www.pyimagesearch.com/2015/09/07/blur-detection-with-opencv/
     """

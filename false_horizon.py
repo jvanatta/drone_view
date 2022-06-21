@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # Python 3
+from typing import Tuple
+
 import cv2 as cv
 import numpy as np
 from sklearn import linear_model
 
-def horizontal_edge_regression(input_image, cutoff_percentile=97):
+def horizontal_edge_regression(input_image: np.ndarray, cutoff_percentile: float = 97) -> Tuple[float, float]:
     """Find the slope and intercept of a best guess at the false horizon.
     For details and graphical examples, see readme.md
     cutoff_percentile determines how many of the detected horizontal edges
@@ -30,7 +32,7 @@ def horizontal_edge_regression(input_image, cutoff_percentile=97):
     if len(selected_points[0] > 0):
         ransac = linear_model.RANSACRegressor()
         # Squared loss is a big improvement over absolute loss in the samples tested
-        ransac.set_params(max_trials=1000, stop_probability=.9999, loss='squared_loss')
+        ransac.set_params(max_trials=1000, stop_probability=.9999, loss='squared_error')
         ransac.fit(selected_points[1].reshape(-1, 1), -1 * selected_points[0])
 
         # Multiply by -1 to convert from "plot" coordinates to "image" coordinates
